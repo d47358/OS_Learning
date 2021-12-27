@@ -36,7 +36,7 @@ SECTION MBR vstart=0x7c00 ;起始地质编译在0x7c00
 
     mov eax,LOADER_START_SECTOR ;起始扇区LBA地址
     mov bx,LOADER_BASE_ADDR ;写入的地址
-    mov cx,1 ;读入扇区数
+    mov cx,4 ;读入扇区数
     call rd_disk_m16
 
     jmp LOADER_BASE_ADDR
@@ -101,9 +101,6 @@ rd_disk_m16:
     loop .go_on_read ;cx存储循环次数
     ret
 
-
-
-    jmp $ ;于此处死循环
     
   times 510 - ($ - $$) db 0 
   db 0x55,0xaa
