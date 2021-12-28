@@ -39,7 +39,7 @@ SECTION MBR vstart=0x7c00 ;起始地质编译在0x7c00
     mov cx,4 ;读入扇区数
     call rd_disk_m16
 
-    jmp LOADER_BASE_ADDR
+    jmp LOADER_BASE_ADDR+0x300
     
 ;读取n个扇区
 rd_disk_m16:
