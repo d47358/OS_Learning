@@ -124,4 +124,66 @@ p_mode_start:
     mov gs,ax
     mov byte [gs:160],'P'
 
-    jmp $
+call setup_page
+sgdt[gdt_ptr] ;导出描述符地址与偏移量
+;0xc0000000---0xffffffff为3-4GB
+mov ebx,[gdt_ptr+2] ;gdt描述符低两字节是偏移量
+or dword[ebx+0x18+4],0xc0000000 ;显存段描述符是第三个，因此加上3*8=24字节，再加上段描述符低四字节，将高四字节的段基址修改到3GB以上
+add dword[gdt_ptr+2],0xc0000000 ;gdt基址加上3GB
+add esp,0xc0000000 ;栈基址加上3GB
+;页目录地址赋给cr3
+mov eax,PAGE_DIR_TABLE_POS
+mov cr3,eax
+;打开cr0的pg位
+mov eax,cr0
+or eax,0x80000000
+mov cr0,eax
+;重新加载gdt
+lgdt[gdt_ptr]
+mov byte [gs:160],'V'
+jmp $
+
+;开启分页
+;清空页目录
+setup_page:
+    mov ecx,4096
+    mov esi,0
+.clear_page_dir:
+    mov byte[PAGE_DIR_TABLE_POS+esi],0
+    inc esi
+    loop .clear_page_dir
+;创建页目录项
+.create_pde:
+    mov eax,PAGE_DIR_TABLE_POS
+    mov [PAGE_DIR_TABLE_POS+4092],eax ;最后一个页目录项指向页目录表位置
+    add eax,0x1000
+    mov ebx,eax 
+    or eax,PG_P|PG_RW_W|PG_US_U
+    mov [PAGE_DIR_TABLE_POS],eax
+    mov [PAGE_DIR_TABLE_POS+0xc00],eax ;第0个和第768个目录项映射为第0个页表项
+;创建页表项
+    mov ecx,256
+    mov esi,0
+    xor edx,edx
+    or edx,PG_P|PG_RW_W|PG_US_U
+.create_pte:
+    mov [ebx+esi*4],edx
+    add edx,4096
+    inc esi
+    loop .create_pte
+
+;创建内核其他页目录项
+    mov eax,PAGE_DIR_TABLE_POS
+    add eax,0x2000
+    or eax,PG_P|PG_RW_W|PG_US_U
+    mov ebx,PAGE_DIR_TABLE_POS
+    mov ecx,254 ;内核256个页目录项，去掉第一个和最后一个
+    mov esi,769
+.create_kernel_pde:
+    mov [ebx+esi*4],eax
+    inc esi
+    add eax,100
+    loop .create_kernel_pde
+    ret
+
+
