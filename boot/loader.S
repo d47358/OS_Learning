@@ -155,12 +155,13 @@ setup_page:
 ;创建页目录项
 .create_pde:
     mov eax,PAGE_DIR_TABLE_POS
-    mov [PAGE_DIR_TABLE_POS+4092],eax ;最后一个页目录项指向页目录表位置
     add eax,0x1000
     mov ebx,eax 
     or eax,PG_P|PG_RW_W|PG_US_U
     mov [PAGE_DIR_TABLE_POS],eax
     mov [PAGE_DIR_TABLE_POS+0xc00],eax ;第0个和第768个目录项映射为第0个页表项
+    sub eax,0x1000
+    mov [PAGE_DIR_TABLE_POS+4092],eax ;最后一个页目录项指向页目录表位置
 ;创建页表项
     mov ecx,256
     mov esi,0
@@ -182,7 +183,7 @@ setup_page:
 .create_kernel_pde:
     mov [ebx+esi*4],eax
     inc esi
-    add eax,100
+    add eax,0x1000
     loop .create_kernel_pde
     ret
 
