@@ -124,6 +124,13 @@ p_mode_start:
     mov gs,ax
     mov byte [gs:160],'P'
 
+;加载kernel
+mov eax,KERNEL_START_SECTOR
+mov ebx,KERNEL_BIN_BASE_ADDR
+mov ecx,200 ;读入扇区数
+call rd_disk_m32
+
+
 call setup_page
 sgdt[gdt_ptr] ;导出描述符地址与偏移量
 ;0xc0000000---0xffffffff为3-4GB
@@ -140,9 +147,14 @@ or eax,0x80000000
 mov cr0,eax
 ;重新加载gdt
 lgdt[gdt_ptr]
-mov byte [gs:160],'V'
-jmp $
 
+jmp SELECTOR_CODE:enter_kernel
+enter_kernel:
+    call kernel_init
+    mov esp,0xc009f000
+    jmp KERNEL_ENTRY_POINT
+
+jmp $
 ;开启分页
 ;清空页目录
 setup_page:
@@ -186,5 +198,108 @@ setup_page:
     add eax,0x1000
     loop .create_kernel_pde
     ret
+
+rd_disk_m32:
+    ;备份eax，ecx
+    mov esi,eax
+    mov di,cx
+    ;设置读取的扇区数
+    mov dx,0x1f2
+    mov al,cl
+    out dx,al
+    ;恢复eax
+    mov eax,esi
+
+;设置LBA地址
+
+    ;0-7位
+    mov dx,0x1f3
+    out dx,al;
+    ;8-15位
+    mov cl,8
+    shr eax,cl
+    mov dx,0x1f4
+    out dx,al
+    ;16-23位
+    shr eax,cl
+    mov dx,0x1f5
+    out dx,al
+
+    ;余下3位放入device寄存器
+    shr eax,cl
+    and eax,0x0f ;保留低4位
+    or eax,0xe0 ;设置寻址模式，主盘从盘
+    mov dx,0x1f6 ;device端口
+    out dx,al
+
+    ;command端口
+    mov dx,0x1f7
+    mov al,0x20 ;读操作
+    out dx,al
+
+    ;检测硬盘状态
+  .not_ready:
+    nop
+    in al,dx
+    and al,0x88
+    cmp al,0x08
+    jnz .not_ready
+
+    ;读数据
+    mov ax,di
+    mov dx,256
+    mul dx
+    mov cx,ax
+    mov dx,0x1f0
+
+  .go_on_read:
+    in ax,dx
+    mov[ebx],ax
+    add ebx,2
+    loop .go_on_read ;cx存储循环次数
+    ret
+
+
+kernel_init:
+    xor eax,eax
+    xor ebx,ebx
+    xor ecx,ecx
+    xor edx,edx
+
+    mov dx,[KERNEL_BIN_BASE_ADDR+42] ;文件偏移42字节处是program header大小
+    mov ebx,[KERNEL_BIN_BASE_ADDR+28] ; 偏移28字节处是第一个program header的偏移量
+    add ebx,KERNEL_BIN_BASE_ADDR ;得到程序头表物理地址
+    mov cx,[KERNEL_BIN_BASE_ADDR+44] ;程序头数量
+    ;读取每个段
+.each_segment:
+    cmp byte [ebx],PT_NULL ;是否为空
+    je .PTNULL
+    ;为memcpy压入参数,memcpy(dst,src,size)
+    push dword [ebx+16] ;程序头偏移16字节处是p_filesz，压入size
+    mov eax,[ebx+4] ;程序头偏移4字节处是p_offset
+    add eax,KERNEL_BIN_BASE_ADDR 
+    push eax
+    push dword [ebx+8] ;偏移8字节是p_vaddr
+    call mem_cpy
+    add esp,12 ;清除栈中三个参数
+.PTNULL:
+    add eax,edx ;edx为program header大小，使eax指向下一个程序头
+    loop .each_segment
+    ret
+mem_cpy:
+    cld ;使用movs时，自动使si,di加上移动的字节数 std为减去
+    push ebp ;备份栈基址
+    mov esp,ebp 
+    push ecx
+    mov edi,[ebp+8] ;dst +4是mem_cpy返回地址
+    mov esi,[ebp+12] ;src
+    mov ecx,[ebp+16] ;size
+    rep movsb ;将si逐字节拷贝至di
+
+    pop ecx
+    pop ebp
+    ret
+
+
 
 
