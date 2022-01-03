@@ -147,7 +147,8 @@ or eax,0x80000000
 mov cr0,eax
 ;重新加载gdt
 lgdt[gdt_ptr]
-
+mov byte [gs:160],'V'
+;jmp $
 jmp SELECTOR_CODE:enter_kernel
 enter_kernel:
     call kernel_init
@@ -283,13 +284,13 @@ kernel_init:
     call mem_cpy
     add esp,12 ;清除栈中三个参数
 .PTNULL:
-    add eax,edx ;edx为program header大小，使eax指向下一个程序头
+    add ebx,edx ;edx为program header大小，使eax指向下一个程序头
     loop .each_segment
     ret
 mem_cpy:
     cld ;使用movs时，自动使si,di加上移动的字节数 std为减去
     push ebp ;备份栈基址
-    mov esp,ebp 
+    mov ebp,esp 
     push ecx
     mov edi,[ebp+8] ;dst +4是mem_cpy返回地址
     mov esi,[ebp+12] ;src
