@@ -2,15 +2,36 @@ RPL0    equ 00b
 TI_GDT  equ 000b
 SELECTOR_VIDEO       equ (0X0003<<3) + TI_GDT + RPL0 
 SELECTOR_DATA	  equ (0X0002<<3) + TI_GDT + RPL0
-
+section .data
+put_int_buffer dq 0
 
 [bits 32]
 section .text
-global put_char
+
+global put_str
 ;------------------- put_char 函数实现 -------------------------------------------
 ;把字符写到光标位置
 ;---------------------------------------------------------------------------------
+put_str:
+   push ebx
+   push ecx
+   xor ecx,ecx
+   mov ebx,[esp+12]
+.goon:
+   mov cl,[ebx]
+   cmp cl,0
+   jz .str_over
+   push ecx
+   call put_char
+   add esp,4
+   inc ebx
+   jmp .goon
+.str_over:
+   pop ecx
+   pop ebx
+   ret
 
+global put_char
 put_char:
 
     pushad           		;push all double寄存器
@@ -116,3 +137,53 @@ put_char:
 .put_char_done:
     popad                        ;把之前全部储存的给pop出来 还原现场
     ret
+
+global put_int
+put_int:
+   pushad
+   mov ebp,esp
+   mov eax,[ebp+4*9]
+   mov edx,eax
+   mov edi,7 ;缓冲区中初始偏移量
+   mov ecx,8 ;填充8个16进制位
+   mov ebx,put_int_buffer
+
+.16based_bits:
+   and edx,0x0000000f ;解析每一位
+   cmp edx,9
+   jg .isA2F
+   add edx,'0'
+   jmp .store
+.isA2F:
+   sub edx,10
+   add edx,'A'
+.store:
+   mov [ebx+edi],dl
+   dec edi
+   shr eax,4
+   mov edx,eax
+   loop .16based_bits
+.ready_to_print:
+   inc edi
+.skip_prefix_0:
+   cmp edi,8
+   je .full0
+.go_on_skip:
+   mov cl,[put_int_buffer+edi]
+   inc edi
+   cmp cl,'0'
+   je .skip_prefix_0
+   dec edi
+   jmp .put_each_num
+.full0:
+   mov cl,'0'
+.put_each_num:
+   push ecx
+   call put_char
+   add esp,4
+   inc edi
+   mov cl,[put_int_buffer+edi]
+   cmp edi,8
+   jl .put_each_num
+   popad
+   ret
