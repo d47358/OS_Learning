@@ -8,8 +8,10 @@
 #define PIC_M_DATA 0x21	       // 主片的数据端口是0x21
 #define PIC_S_CTRL 0xa0	       // 从片的控制端口是0xa0
 #define PIC_S_DATA 0xa1	       // 从片的数据端口是0xa1
-
 #define IDT_DESC_CNT 0x21      // 目前总共支持的中断数
+
+#define EFLAGS_IF 0x00000200
+#define GET_FLAGS(EFLAGS_VAR) asm volatile ("pushfl; popl %0" :"=g" (EFLAGS_VAR))
 
 /*中断门描述符结构体*/
 struct gate_desc {
@@ -136,4 +138,33 @@ void idt_init() {
    uint64_t idt_operand = ((sizeof(idt) - 1) | ((uint64_t)(uint32_t)idt << 16));
    asm volatile("lidt %0" : : "m" (idt_operand));
    put_str("idt_init done\n");
+}
+
+enum intr_status intr_enable(){
+   enum intr_status old_status;
+   if(intr_get_status()==INTR_OFF){
+      old_status=INTR_OFF;
+      asm volatile("sti");
+   }else{
+      old_status=INTR_ON;
+   }
+   return old_status;
+}
+enum intr_status intr_disable(){
+   enum intr_status old_status;
+   if(intr_get_status()==INTR_OFF){
+      old_status=INTR_OFF;
+   }else{
+      old_status=INTR_ON;
+      asm volatile("cli":::"memory");  
+   }
+   return old_status;
+}
+enum intr_status intr_get_status(){
+	uint32_t eflags=0;
+	GET_FLAGS(eflags);
+	return eflags&EFLAGS_IF?INTR_ON:INTR_OFF;
+}
+enum intr_status intr_set_status(enum intr_status status){
+	return status==INTR_ON?intr_enable():intr_disable();
 }
