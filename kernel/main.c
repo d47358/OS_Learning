@@ -5,7 +5,7 @@ int main(void){
     put_str("I AM KERNEL\n");
     init_all();
     //asm volatile("sti");
-    ASSERT(1==2);
+    //ASSERT(1==2);
     while(1);
     return 0;
 }
