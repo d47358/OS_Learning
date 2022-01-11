@@ -9,8 +9,49 @@
 //内核堆起始虚拟地址，3GB以上跨过1MB(0x100000)
 #define K_HEAP_START 0xc0100000
 
+#define PDE_IDX(addr) (addr&0xffc00000)>>22
+#define PTE_IDX(addr) (addr&0x003ff000)>>12 //虚拟地址的前12位和中间12位
+
 struct pool kernel_pool,user_pool;
 struct virtual_addr kernel_vaddr;
+
+//在虚拟地址池中申请pg_cnt个虚拟页
+static void* vaddr_get(enum pool_flags pf,uint32_t pg_cnt){
+    int vaddr_start=0, bits_idx_start=-1;
+    uint32_t cnt=0;
+    if(pf==PF_KERNEL){
+        if(bits_idx_start=bitmap_scan(&kernel_vaddr.vaddr_bitmap,pg_cnt)==-1)
+            return NULL;
+        while(cnt<pg_cnt){
+            bitmap_set(&kernel_vaddr.vaddr_bitmap,bits_idx_start+cnt++,1);
+        }
+        vaddr_start=kernel_vaddr.vaddr_start+bits_idx_start*PAGE_SIZE;
+    }else{
+        //用户地址池
+    }
+    return (void*)vaddr_start;
+}
+//得到虚拟地址的pte指针
+uint32_t* pte_ptr(uint32_t vaddr){
+    uint32_t* pte=(uint32_t*)(0xffc00000)+((vaddr&0xffc00000)>>10)+(PTE_IDX(vaddr)*4);
+    return pte;
+}
+uint32_t* pde_ptr(uint32_t vaddr){
+    uint32_t* pde=(uint32_t*)(0xfffff000)+(PDE_IDX(vaddr)*4);
+    return pde;
+}
+//分配1个物理页
+static void* palloc(struct pool* mem_pool){
+    int idx=bitmap_scan(&mem_pool->pool_bitmap,1);
+    if(idx==-1) return NULL;
+    bitmap_set(&mem_pool->pool_bitmap,idx,1);
+    uint32_t* page_phyaddr=mem_pool->phy_addr_start+idx*PAGE_SIZE;
+    return page_phyaddr;
+}
+//虚拟地址与物理地址的映射
+//static void page_table_add(void* _vaddr,void* _page_phyaddr){
+
+//}
 
 static void mem_pool_init(uint32_t all_mem){
     put_str("mem_pool init start\n");
@@ -70,3 +111,4 @@ void mem_init(){
     mem_pool_init(all_mem);
     put_str("mem_init done\n");
 }
+

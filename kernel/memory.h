@@ -2,7 +2,17 @@
 #define __KERNEL_MEMORY_H
 #include "stdint.h"
 #include "bitmap.h"
-
+#define NULL (void*)0
+enum pool_flags{
+    PF_KERNEL=1,
+    PF_USER=2
+};
+#define PG_P_1 1
+#define PG_P_0 0 //页表项和页目录项是否存在
+#define PG_RW_R 0 //R/W位
+#define PG_RW_W 2
+#define PG_US_S 0 //U/S位
+#define PG_US_U 4
 //虚拟地址池
 struct virtual_addr
 {
