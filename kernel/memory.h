@@ -2,7 +2,8 @@
 #define __KERNEL_MEMORY_H
 #include "stdint.h"
 #include "bitmap.h"
-#define NULL (void*)0
+#include "debug.h"
+//#define NULL (void*)0
 enum pool_flags{
     PF_KERNEL=1,
     PF_USER=2
@@ -27,6 +28,16 @@ struct pool{
 
 };
 
+extern struct pool kernel_pool,user_pool;
+static void* vaddr_get(enum pool_flags pf,uint32_t pg_cnt);
+uint32_t* pte_ptr(uint32_t vaddr);
+uint32_t* pde_ptr(uint32_t vaddr);
+static void* palloc(struct pool* m_pool);
+static void page_table_add(void* _vaddr,void* _page_phyaddr);
+void* malloc_page(enum pool_flags pf,uint32_t pg_cnt);
+void* get_kernel_pages(uint32_t pg_cnt);
+static void mem_pool_init(uint32_t all_mem);
 void mem_init();
+
 
 #endif

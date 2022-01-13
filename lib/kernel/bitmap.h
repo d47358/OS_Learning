@@ -2,6 +2,7 @@
 #define __LIB_KERNEL_BITMAP_H
 #include "global.h"
 #include "stdint.h"
+#include "string.h"
 #define BITMAP_MASK 1
 typedef int bool;
 struct bitmap
