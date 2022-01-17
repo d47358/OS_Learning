@@ -15,7 +15,7 @@ intr%1entry:
     push es
     push fs
     push gs
-    pushad
+    pushad ;EAX,ECX,EDX,EBX,ESP(初始值)，EBP,ESI,EDI
 
     mov al,0x20
     out 0xa0,al

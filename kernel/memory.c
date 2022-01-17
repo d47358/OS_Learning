@@ -10,7 +10,7 @@
 #define K_HEAP_START 0xc0100000
 
 #define PDE_IDX(addr) ((addr&0xffc00000)>>22)
-#define PTE_IDX(addr) ((addr&0x003ff000)>>12 )//虚拟地址的前12位和中间12位
+#define PTE_IDX(addr) ((addr&0x003ff000)>>12)//虚拟地址的前12位和中间12位
 
 struct pool kernel_pool,user_pool;
 struct virtual_addr kernel_vaddr;
