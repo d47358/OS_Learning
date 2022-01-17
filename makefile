@@ -3,14 +3,14 @@ ENTRY_POINT = 0xc0001500
 AS = nasm
 CC = gcc
 LD = ld
-LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ 
+LIB = -I lib/ -I lib/kernel/ -I lib/user/ -I kernel/ -I device/ -I thread/
 ASFLAGS = -f elf
 CFLAGS = -Wall -m32 -fno-stack-protector $(LIB) -c -fno-builtin -W -Wstrict-prototypes -Wmissing-prototypes
 LDFLAGS =  -m elf_i386 -Ttext $(ENTRY_POINT) -e main -Map $(BUILD_DIR)/kernel.map
 OBJS = $(BUILD_DIR)/main.o $(BUILD_DIR)/init.o $(BUILD_DIR)/interrupt.o \
       $(BUILD_DIR)/timer.o $(BUILD_DIR)/kernel.o $(BUILD_DIR)/print.o \
       $(BUILD_DIR)/debug.o $(BUILD_DIR)/string.o $(BUILD_DIR)/memory.o \
-      $(BUILD_DIR)/bitmap.o
+      $(BUILD_DIR)/bitmap.o $(BUILD_DIR)/thread.o
 
 ##############     c代码编译     			###############
 ##############     后面的代码以后照本宣科即可		###############
@@ -44,6 +44,10 @@ $(BUILD_DIR)/memory.o: kernel/memory.c kernel/memory.h \
 
 $(BUILD_DIR)/bitmap.o: lib/kernel/bitmap.c lib/kernel/bitmap.h \
         lib/string.h kernel/interrupt.h lib/kernel/print.h kernel/debug.h
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/thread.o: thread/thread.c thread/thread.h \
+        lib/stdint.h lib/string.h kernel/global.h kernel/memory.h
 	$(CC) $(CFLAGS) $< -o $@
 
 
