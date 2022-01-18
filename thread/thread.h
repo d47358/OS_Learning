@@ -1,7 +1,8 @@
 #ifndef __THREAD_THREAD_H
 #define __THREAD_THREAD_H
 #include "stdint.h"
-
+#include "list.h"
+#include "interrupt.h"
 typedef void thread_func(void*);
 //进程或线程状态
 enum task_status{
@@ -59,7 +60,14 @@ struct task_struct
     enum task_status status;                        //线程状态
     uint8_t priority;				      //特权级
     char name[16];
+    uint8_t ticks;//每次运行的tick数
+    uint32_t elapsed_ticks;//自上cpu运行以来占用的tick数
+    //标签仅仅是加入队列用的，取出来时还要通过offset宏和elem2entry宏转换为&thread
+    struct list_elem general_tag;//双向链表中的节点
+    struct list_elem all_list_tag;//全部线程队列中的节点
+    uint32_t* pgdir;//进程页表的虚拟地址
     uint32_t stack_magic;			      //越界检查  因为我们pcb上面的就是我们要用的栈了 到时候还要越界检查
+    
 };
 
 #endif
