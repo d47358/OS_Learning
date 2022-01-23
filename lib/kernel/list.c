@@ -1,7 +1,7 @@
 #include "list.h"
 #include "interrupt.h"
-
-void list_init(struct list*){
+#include "debug.h"
+void list_init(struct list* list){
     list->head.prev=NULL;
     list->head.next=&list->tail;
     list->tail.prev=&list->head;
@@ -17,7 +17,7 @@ void list_insert_before(struct list_elem* before,struct list_elem* elem){
     intr_set_status(old_status);
 }
 void list_push(struct list* plist,struct list_elem* elem){
-   list_insert_before(&plist->head.next,elem);
+   list_insert_before(plist->head.next,elem);
 }
 void list_append(struct list* plist,struct list_elem* elem){
     list_insert_before(&plist->tail,elem);

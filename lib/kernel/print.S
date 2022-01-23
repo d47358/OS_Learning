@@ -66,14 +66,14 @@ put_char:
        
  .is_backspace:
     cmp bx,0                   ;如果bx = 0 则没有办法退格了 这是我除书上之外额外加的条件
-    je  .set_cursor              
+    je  set_cursor              
     
     dec bx                     ;光标位置退1
     shl bx,1                   ;一个字符占两个字节 一个字节是属性 一个字节ascii 
     
     mov word [gs:bx],0x0720    ;低字节ascii 32 ascii表示空字符 7 高字符属性空
     shr bx,1                   ;退回原来的位置
-    jmp .set_cursor            ;交给硬件去处理光标位置 到时候在那几个老端口把字符信息还回去就完事了
+    jmp set_cursor            ;交给硬件去处理光标位置 到时候在那几个老端口把字符信息还回去就完事了
     
  .put_other_char:
     shl bx,1                   
@@ -83,7 +83,7 @@ put_char:
     inc bx
     shr bx,1
     cmp bx,2000                ;没到边界2000即跳转
-    jl  .set_cursor            ;没有的话 继续往下进行 都2000了其实下面的操作也是不能跳转走的
+    jl  set_cursor            ;没有的话 继续往下进行 都2000了其实下面的操作也是不能跳转走的
                                ;只能等下面继续处理滚动屏幕了
                                
     
@@ -100,7 +100,7 @@ put_char:
     add bx,80                  ;一共一页2000 共25行 2000/25=80 则向bx增加80
     cmp bx,2000
  .is_line_feed_end:
-    jl .set_cursor             
+    jl set_cursor             
     
  .roll_screen:
     cld                        ;从低到高移动                 
@@ -119,8 +119,9 @@ put_char:
     loop .clean_last_row
     
     mov ebx,1920
-    
- .set_cursor:
+
+global set_cursor:
+ set_cursor:
     mov dx,0x3D4
     mov al,0xE
     out dx,al

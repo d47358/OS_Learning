@@ -3,12 +3,12 @@
 #include "global.h"
 #include "io.h"
 #include "print.h"
-
+#include "debug.h"
 #define PIC_M_CTRL 0x20	       // 这里用的可编程中断控制器是8259A,主片的控制端口是0x20
 #define PIC_M_DATA 0x21	       // 主片的数据端口是0x21
 #define PIC_S_CTRL 0xa0	       // 从片的控制端口是0xa0
 #define PIC_S_DATA 0xa1	       // 从片的数据端口是0xa1
-#define IDT_DESC_CNT 0x21      // 目前总共支持的中断数
+#define IDT_DESC_CNT 0x30      // 目前总共支持的中断数
 
 #define EFLAGS_IF 0x00000200
 #define GET_FLAGS(EFLAGS_VAR) asm volatile ("pushfl; popl %0" :"=g" (EFLAGS_VAR))
@@ -60,6 +60,9 @@ static void pic_init(void) {
    outb (PIC_M_DATA, 0xfe);
    outb (PIC_S_DATA, 0xff);
 
+   outb (PIC_M_DATA, 0xfc); //这里修改了 只打开键盘中断
+   outb (PIC_S_DATA, 0xff);
+
    put_str("   pic_init done\n");
 }
 
@@ -86,12 +89,31 @@ static void idt_desc_init(void) {
 
 //通用的中断处理函数,一般用在异常出现时的处理
 static void general_intr_handler(uint8_t vec_nr) {
+   //ASSERT(vec_nr!=0xd);
    if (vec_nr == 0x27 || vec_nr == 0x2f) {	// 0x2f是从片8259A上的最后一个irq引脚，保留
       return;		//IRQ7和IRQ15会产生伪中断(spurious interrupt),无须处理。
    }
-   put_str("int vector : 0x");
-   put_int(vec_nr);
-   put_char('\n');	
+   //put_str("int vector : 0x");
+   //put_int(vec_nr);
+   //put_char('\n');	
+   set_cursor(0);
+   int cur_pos=0;
+   while(cur_pos<320){
+      put_char(' ');
+      ++cur_pos;
+   }
+   set_cursor(0);
+   put_str("!!!!    exception message begin    !!!!\n");
+   set_cursor(88);
+   put_str(intr_name[vec_nr]);
+   if(vec_nr==14){
+      int page_fault_vaddr=0;
+      asm("mov %%cr2, %0":"=r"(page_fault_vaddr));
+      put_str("\npage fault addr is ");
+      put_int(page_fault_vaddr);
+   }
+   put_str("\n!!!!    exception message end    !!!!\n");
+   while(1);
 }
 // 完成一般中断处理函数注册及异常名称注册
 static void exception_init(void) {			    // 完成一般中断处理函数注册及异常名称注册
@@ -163,8 +185,12 @@ enum intr_status intr_disable(){
 enum intr_status intr_get_status(){
 	uint32_t eflags=0;
 	GET_FLAGS(eflags);
-	return eflags&EFLAGS_IF?INTR_ON:INTR_OFF;
+	return (eflags&EFLAGS_IF)?INTR_ON:INTR_OFF;
 }
 enum intr_status intr_set_status(enum intr_status status){
 	return status==INTR_ON?intr_enable():intr_disable();
+}
+
+void register_handler(uint8_t vector_no, intr_handler function){
+   idt_table[vector_no]=function;
 }

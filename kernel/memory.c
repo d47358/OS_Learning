@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "print.h"
+#include "string.h"
 #define PAGE_SIZE 4096
 //PCB最高处0xXXXXXfff以下是0特权级下使用的栈，因此栈顶是0xXXXXXfff+1
 //内核加载时栈顶指向0xc009f000,PCB大小为fff,因此主线程PCB起始地址为0xc009efff-ffff=0xc009e000
