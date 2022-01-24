@@ -73,7 +73,11 @@ $(BUILD_DIR)/console.o: device/console.c device/console.h \
 
 $(BUILD_DIR)/keyboard.o: device/keyboard.c device/keyboard.h \
 	lib/kernel/print.h lib/kernel/io.h kernel/interrupt.h \
-	kernel/global.h
+	kernel/global.h device/ioqueue.h
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/ioqueue.o: device/ioqueue.c device/ioqueue.h \
+	kernel/interrupt.h kernel/global.h kernel/debug.h
 	$(CC) $(CFLAGS) $< -o $@
 
 ##############    汇编代码编译    ###############
