@@ -2,7 +2,8 @@
 #define __THREAD_THREAD_H
 #include "stdint.h"
 #include "list.h"
-#include "interrupt.h"
+#include "bitmap.h"
+#include "memory.h"   //分配页需要
 typedef void thread_func(void*);
 //进程或线程状态
 enum task_status{
@@ -15,7 +16,7 @@ enum task_status{
 };
 
 //中断栈，用于处理中断被切换的上下文环境储存
-struct intr_struct{
+struct intr_stack{
     uint32_t vec_no; //中断号
     uint32_t edi;
     uint32_t esi;
@@ -58,25 +59,30 @@ struct task_struct
 {
     uint32_t* self_kstack;                          //pcb中的 kernel_stack 内核栈
     enum task_status status;                        //线程状态
-    uint8_t priority;				      //特权级
     char name[16];
+    uint8_t priority;				      //特权级
+    
     uint8_t ticks;//每次运行的tick数
     uint32_t elapsed_ticks;//自上cpu运行以来占用的tick数
     //标签仅仅是加入队列用的，取出来时还要通过offset宏和elem2entry宏转换为&thread
     struct list_elem general_tag;//双向链表中的节点
     struct list_elem all_list_tag;//全部线程队列中的节点
     uint32_t* pgdir;//进程页表的虚拟地址
+    struct virtual_addr userprog_vaddr; //用户进程的虚拟地址池
     uint32_t stack_magic;			      //越界检查  因为我们pcb上面的就是我们要用的栈了 到时候还要越界检查
     
 };
 
+extern struct list thread_ready_list;
+extern struct list thread_all_list;
+
+void thread_create(struct task_struct* pthread, thread_func function, void* func_arg);
+void init_thread(struct task_struct* pthread, char* name, int prio);
+struct task_struct* thread_start(char* name, int prio, thread_func function, void* func_arg);
 struct task_struct* running_thread(void);
-static void kernel_thread(thread_func* function,void* func_arg);
-void thread_create(struct task_struct* pthread,thread_func function,void* func_arg);
-void init_thread(struct task_struct* pthread,char* name,int prio);
-struct task_struct* thread_start(char* name,int prio,thread_func function,void* func_arg);
-static void make_main_thread(void);
 void schedule(void);
 void thread_init(void);
+void thread_block(enum task_status stat);
+void thread_unblock(struct task_struct* pthread);
 
 #endif

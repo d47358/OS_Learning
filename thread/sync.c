@@ -12,7 +12,7 @@ void sema_init(struct semaphore* psema,uint8_t value){
 
 void lock_init(struct lock* plock){
     plock->holder=NULL;
-    plock->holder_repeat_nr;
+    plock->holder_repeat_nr=0;
     sema_init(&plock->semaphore,1);
 }
 
@@ -37,6 +37,7 @@ void sema_up(struct semaphore* psema){
     if(!list_empty(&psema->waiters)){
         struct task_struct* thread_blocked=elem2entry(struct task_struct,general_tag,list_pop(&psema->waiters));
         thread_unblock(thread_blocked);
+        //thread_unblock((struct task_struct*)((uint32_t)list_pop(&psema->waiters) & 0xfffff000));
     }
     ++psema->value;
     ASSERT(psema->value==1);
