@@ -2,7 +2,14 @@
 #define __KERNEL_MEMORY_H
 #include "stdint.h"
 #include "bitmap.h"
-#include "debug.h"
+
+//#include "thread.h"
+//虚拟地址池
+struct virtual_addr
+{
+    struct bitmap vaddr_bitmap;
+    uint32_t vaddr_start;
+};
 //#define NULL (void*)0
 enum pool_flags{
     PF_KERNEL=1,
@@ -14,19 +21,9 @@ enum pool_flags{
 #define PG_RW_W 2
 #define PG_US_S 0 //U/S位
 #define PG_US_U 4
-//虚拟地址池
-struct virtual_addr
-{
-    struct bitmap vaddr_bitmap;
-    uint32_t vaddr_start;
-};
-//内存池
-struct pool{
-    struct bitmap pool_bitmap; //内存池用到的位图
-    uint32_t phy_addr_start;  //本内存池管理的物理内存的起始地址
-    uint32_t pool_size;
 
-};
+//内存池
+
 
 extern struct pool kernel_pool,user_pool;
 static void* vaddr_get(enum pool_flags pf,uint32_t pg_cnt);
@@ -36,6 +33,9 @@ static void* palloc(struct pool* m_pool);
 static void page_table_add(void* _vaddr,void* _page_phyaddr);
 void* malloc_page(enum pool_flags pf,uint32_t pg_cnt);
 void* get_kernel_pages(uint32_t pg_cnt);
+void* get_user_pages(uint32_t pg_cnt);
+void* get_a_page(enum pool_flags pf,uint32_t vaddr);
+uint32_t addr_v2p(uint32_t vaddr);
 static void mem_pool_init(uint32_t all_mem);
 void mem_init();
 

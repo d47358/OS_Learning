@@ -3,7 +3,6 @@
 #include "global.h"
 #include "io.h"
 #include "print.h"
-#include "debug.h"
 #define PIC_M_CTRL 0x20	       // 这里用的可编程中断控制器是8259A,主片的控制端口是0x20
 #define PIC_M_DATA 0x21	       // 主片的数据端口是0x21
 #define PIC_S_CTRL 0xa0	       // 从片的控制端口是0xa0
