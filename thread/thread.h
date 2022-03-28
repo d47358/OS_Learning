@@ -5,6 +5,7 @@
 #include "bitmap.h"
 #include "memory.h"   //分配页需要
 typedef void thread_func(void*);
+typedef int16_t pid_t;
 //进程或线程状态
 enum task_status{
     TASK_RUNNING, // 0
@@ -58,6 +59,7 @@ struct thread_stack{
 struct task_struct
 {
     uint32_t* self_kstack;                          //pcb中的 kernel_stack 内核栈
+    pid_t pid;
     enum task_status status;                        //线程状态
     char name[16];
     uint8_t priority;				      //特权级
@@ -69,6 +71,7 @@ struct task_struct
     struct list_elem all_list_tag;//全部线程队列中的节点
     uint32_t* pgdir;//进程页表的虚拟地址
     struct virtual_addr userprog_vaddr; //用户进程的虚拟地址池
+    struct mem_block_desc u_block_desc[DESC_CNT];
     uint32_t stack_magic;			      //越界检查  因为我们pcb上面的就是我们要用的栈了 到时候还要越界检查
     
 };

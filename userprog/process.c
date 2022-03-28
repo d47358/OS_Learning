@@ -16,7 +16,6 @@ void start_process(void* filename_)
 {
     //schedule线程调度后 来到这里
     //特权级0级 到 3级通过 iretd "欺骗" cpu  把用户进程的环境给准备好 iretd即进入
-    enum intr_status old_status=intr_disable();
     void* function = filename_;
     struct task_struct* cur = running_thread();
     cur->self_kstack+=sizeof(struct thread_stack);
@@ -27,11 +26,10 @@ void start_process(void* filename_)
     proc_stack->gs = 0;
     proc_stack->ss =proc_stack->ds = proc_stack->es = proc_stack->fs = SELECTOR_U_DATA;			//数据段选择子
     proc_stack->eip = function;								//函数地址 ip
-    proc_stack->cs =  0x2B;//SELECTOR_U_CODE;								//cs ip cs选择子
+    proc_stack->cs =  SELECTOR_U_CODE;								//cs ip cs选择子
     proc_stack->eflags = (EFLAGS_IOPL_0 | EFLAGS_MBS | EFLAGS_IF_1);				//不能够关闭中断 ELFAG_IF_1 不然会导致无法调度
     proc_stack->esp = (void*)((uint32_t)get_a_page(PF_USER,USER_STACK3_VADDR) + PG_SIZE);	//栈空间在0xc0000000以下一页的地方 当然物理内存是操作系统来分配
-    //proc_stack->ss = SELECTOR_U_DATA;	
-    intr_set_status(old_status);							//数据段选择子
+    //proc_stack->ss = SELECTOR_U_DATA;	//数据段选择子
     asm volatile ("movl %0,%%esp;jmp intr_exit": : "g"(proc_stack) : "memory");
 }
 
@@ -55,6 +53,7 @@ void process_activate(struct task_struct* p_thread)
     	update_tss_esp(p_thread);
 }
 
+//创建页目录表
 uint32_t* create_page_dir(void)
 {
     uint32_t* page_dir_vaddr = get_kernel_pages(1);				//得到内存
@@ -64,6 +63,7 @@ uint32_t* create_page_dir(void)
     	return NULL;
     }
     
+    //指向内核空间
     memcpy((uint32_t*)((uint32_t)page_dir_vaddr + 0x300*4),(uint32_t*)(0xfffff000+0x300*4),1024); // 256项
     
     uint32_t new_page_dir_phy_addr = addr_v2p((uint32_t)page_dir_vaddr);                    
@@ -87,7 +87,7 @@ void process_execute(void* filename,char* name)
     create_user_vaddr_bitmap(thread);			 //为虚拟地址位图初始化 分配空间
     thread_create(thread,start_process,filename);	 //创造线程 start_process 之后通过start_process intr_exit跳转到用户进程
     thread->pgdir = create_page_dir();		 //把页目录表的地址分配了 并且把内核的页目录都给复制过去 这样操作系统对每个进程都可见
-    
+    block_desc_init(thread->u_block_desc);
     enum intr_status old_status = intr_disable();     
     ASSERT(!elem_find(&thread_ready_list,&thread->general_tag));
     list_append(&thread_ready_list,&thread->general_tag);     //添加线程 start_process到就绪队列中

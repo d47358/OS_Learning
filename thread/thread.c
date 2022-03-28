@@ -7,13 +7,23 @@
 #include "print.h"
 #include "memory.h"
 #include "process.h"
+#include "sync.h"
 #define PG_SIZE 4096
+
 
 struct task_struct* main_thread; //主线程PCB
 struct list thread_ready_list;//就绪队列
 struct list thread_all_list;//全部任务队列
 static struct list_elem* thread_tag;//用于保存队列中的线程节点
+struct lock pid_lock;
 
+static pid_t allocate_pid() {
+    static pid_t next_pid = 0;
+    lock_acquire(&pid_lock);
+    ++next_pid;
+    lock_release(&pid_lock);
+    return next_pid;
+}
 
 extern void switch_to(struct task_struct* cur, struct task_struct* next);
 
@@ -31,6 +41,7 @@ static void kernel_thread(thread_func* function, void* func_arg){
 void init_thread(struct task_struct* pthread, char* name, int prio){
     memset(pthread, 0, sizeof(*pthread));
     strcpy(pthread->name,name);
+    pthread->pid = allocate_pid();
     if(pthread==main_thread){
         pthread->status=TASK_RUNNING;
     }else{
@@ -95,6 +106,7 @@ void thread_init(){
     put_str("thread_init start\n");
     list_init(&thread_ready_list);
     list_init(&thread_all_list);
+    lock_init(&pid_lock);
     make_main_thread();
     put_str("thread_init done\n");
 }
@@ -115,7 +127,7 @@ void thread_block(enum task_status stat)
     intr_set_status(old_status);
 }
 
-//由锁拥有者来执行的 善良者把原来自我阻塞的线程重新放到队列中
+//把原来自我阻塞的线程重新放到队列中
 void thread_unblock(struct task_struct* pthread)
 {
     enum intr_status old_status = intr_disable();
