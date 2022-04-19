@@ -13,6 +13,7 @@
 #define COUNTER_MODE		2
 #define READ_WRITE_LATCH	3
 #define PIT_COUNTROL_PORT	0x43
+#define mil_second_per_init	1000 / IRQ0_FREQUENCY
 
 uint32_t ticks;
 
@@ -44,4 +45,20 @@ void timer_init(void)
     //register_handler(0xd,intr_timer_handler);
     put_str("timer_init done!\n");
     return;
+}
+
+//休息n个时间中断期
+void ticks_to_sleep(uint32_t sleep_ticks)
+{
+    uint32_t start_tick = ticks;
+    while(ticks - start_tick < sleep_ticks)
+    	thread_yield();
+}
+
+//毫秒为单位 通过毫秒的中断数来调用ticks_to_sleep 来达到休息毫秒的作用
+void mtime_sleep(uint32_t m_seconds)
+{
+    uint32_t sleep_ticks = DIV_ROUND_UP(m_seconds,mil_second_per_init);
+    ASSERT(sleep_ticks > 0);
+    ticks_to_sleep(sleep_ticks);
 }
